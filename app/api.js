@@ -1,8 +1,16 @@
-const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
 const express = require('express');
 const multer = require('multer');
 const moment = require('moment-timezone');
+// ...existing code...
+// Tratamento global de erros
+app.use((err, req, res, next) => {
+  console.error('Erro global:', err);
+  res.status(500).json({ error: 'Erro interno do servidor', details: err.message });
+});
 
+app.listen(port, () => {
+  console.log(`API rodando na porta ${port}`);
+});
 const app = express();
 const port = 4000;
 
@@ -48,6 +56,51 @@ const getCurrentTime = () => {
 };
 
 if (isGroup(number)) {
+require('dotenv').config();
+const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
+const express = require('express');
+const multer = require('multer');
+const moment = require('moment-timezone');
+
+const app = express();
+const port = process.env.PORT || 4000;
+
+const client = new Client({
+  authStrategy: new LocalAuth(),
+  puppeteer: { args: ['--no-sandbox'] }
+});
+
+client.initialize();
+
+client.on('loading_screen', (percent, message) => {
+  console.log('Carregando', percent, message);
+});
+
+client.on('authenticated', () => {
+  console.log('Autenticado');
+});
+
+client.on('auth_failure', msg => {
+  // Fired if session restore was unsuccessful
+  console.error('Falha na autenticacao', msg);
+});
+
+client.on('ready', () => {
+  console.log('Cliente iniciado e pronto para uso!');
+});
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Middleware para log de requisições
+app.use((req, res, next) => {
+  console.log(`[${moment().tz(process.env.TZ || 'America/Sao_Paulo').format('YYYY-MM-DD HH:mm:ss')}] ${req.method} ${req.url}`);
+  next();
+});
+
+// Rotas
+const messageRoutes = require('./routes/message');
+app.use('/api/message', messageRoutes(client));
 
   // Envia a mensagem usando o cliente do WhatsApp
   client.sendMessage(`${number}@c.us`, message)
